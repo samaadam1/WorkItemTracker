@@ -33,18 +33,18 @@ public class WorkItem
 
     public Priority Priority { get; }
 
-    // Readable by anyone, changed only through ChangeStatus().
+    // Readable by anyone, changed only through MoveToStatus().
     public WorkItemStatus Status { get; private set; }
 
     // null means unassigned. Stores the user's Id, not the User object.
-    // Readable by anyone, changed only through Assign().
+    // Readable by anyone, changed only through AssignTo().
     public int? AssigneeId { get; private set; }
 
     public DateTime CreatedAt { get; }
 
     // R4: assigning again replaces the previous assignee, but a Done item can't be assigned.
     // Checking that the user exists is the caller's job, because this class doesn't know the users.
-    public void Assign(int userId)
+    public void AssignTo(int userId)
     {
         if (Status == WorkItemStatus.Done)
         {
@@ -56,7 +56,7 @@ public class WorkItem
 
     // R5: status only moves forward, one step at a time.
     // R6: moving to InProgress requires an assignee.
-    public void ChangeStatus(WorkItemStatus newStatus)
+    public void MoveToStatus(WorkItemStatus newStatus)
     {
         if (newStatus != Status + 1)
         {
