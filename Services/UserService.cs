@@ -1,10 +1,17 @@
 using WorkItemTracker.Models;
+using WorkItemTracker.Patterns;
 
 namespace WorkItemTracker.Services;
 
 // Owns the list of users and the rules that need to see all of them (R1, R2).
-public class UserService
+// Singleton: there is exactly one users list, reached through UserService.Instance.
+public class UserService : Singleton<UserService>
 {
+    // Private, so nobody can create a second users list with "new UserService()".
+    private UserService()
+    {
+    }
+
     // Users by Id, so looking one up is a direct hit instead of a scan.
     private readonly Dictionary<int, User> _users = new();
 

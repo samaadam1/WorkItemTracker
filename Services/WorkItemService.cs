@@ -1,18 +1,20 @@
 using WorkItemTracker.Models;
+using WorkItemTracker.Patterns;
 
 namespace WorkItemTracker.Services;
 
 // Owns the list of work items and the rules that need more than one item or the users (R3, R4, Q1-Q3).
-public class WorkItemService
+// Singleton: there is exactly one work items list, reached through WorkItemService.Instance.
+public class WorkItemService : Singleton<WorkItemService>
 {
     // Work items by Id, so looking one up is a direct hit instead of a scan.
     private readonly Dictionary<int, WorkItem> _items = new();
-    private readonly UserService _users;
+    private readonly UserService _users = UserService.Instance;
     private int _nextId = 1;
 
-    public WorkItemService(UserService users)
+    // Private, so nobody can create a second work items list with "new WorkItemService()".
+    private WorkItemService()
     {
-        _users = users;
     }
 
     // R3: create a ToDo item with the next Id. The assignee, if given, must be an existing user.
