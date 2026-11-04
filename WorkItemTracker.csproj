@@ -1,4 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<!-- dotnet new console -n WorkItemTracker: Generates a new C# console application template inside a folder named WorkItemTracker. 
+This creates the project file (.csproj) and entry point (Program.cs). -->
+
+<!-- dotnet run: Compiles and executes the console application 
+from the current working directory containing the .csproj file. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
