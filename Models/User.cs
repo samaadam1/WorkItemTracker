@@ -20,6 +20,12 @@ public class User
             throw new DomainException($"Name must be at most {MaxNameLength} characters.");
         }
 
+        // Letters (from any language) and spaces only, so "1" or "###" is not a name.
+        if (!name.All(c => char.IsLetter(c) || c == ' '))
+        {
+            throw new DomainException("Name can only contain letters and spaces.");
+        }
+
         Id = id;
         Name = name;
     }
