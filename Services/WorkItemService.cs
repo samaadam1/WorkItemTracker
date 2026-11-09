@@ -1,21 +1,26 @@
 using WorkItemTracker.Models;
-using WorkItemTracker.Patterns;
+
 
 namespace WorkItemTracker.Services;
 
 // Owns the list of work items and the rules that need more than one item or the users (R3, R4, Q1-Q3).
 // Singleton: there is exactly one work items list, reached through WorkItemService.Instance.
-public class WorkItemService : Singleton<WorkItemService>
+public class WorkItemService
 {
     // Work items by Id, so looking one up is a direct hit instead of a scan.
     private readonly Dictionary<int, WorkItem> _items = new();
+
+    // we dont need only one instance for user, we need to call other differences
     private readonly UserService _users = UserService.Instance;
     private int _nextId = 1;
 
-    // Private, so nobody can create a second work items list with "new WorkItemService()".
+    
     private WorkItemService()
     {
+        // Private, so nobody can create a second work items list with "new WorkItemService()".
     }
+    // static: ensures there’s only one copy shared across the program.
+    public static WorkItemService Instance { get; } = new WorkItemService();
 
     // R3: create a ToDo item with the next Id. The assignee, if given, must be an existing user.
     public WorkItem Create(string title, Priority priority, int? assigneeId)
@@ -77,6 +82,9 @@ public class WorkItemService : Singleton<WorkItemService>
     private WorkItem GetRequired(int id) =>
         Find(id) ?? throw new DomainException($"Work item {id} does not exist.");
 
+    // Q1-Q3: order by priority, then Id. The caller can filter first, so this is private.
+    // IEnum.OrderBy is stable, so the ThenBy preserves the priority order when Ids are compared.
+    // IEnumerable<WorkItem> is a sequence you can read through. It has no Count or index, and you can't add to it.    
     private static IReadOnlyList<WorkItem> OrderByPriorityThenId(IEnumerable<WorkItem> items) =>
         items.OrderBy(i => i.Priority).ThenBy(i => i.Id).ToList();
 }

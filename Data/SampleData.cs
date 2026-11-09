@@ -12,9 +12,9 @@ public static class SampleData
         var users = UserService.Instance;
         var workItems = WorkItemService.Instance;
 
-        var sara = users.Add("Sara");
-        var adel = users.Add("Adel");
-        users.Add("Lina"); // no work items assigned to her
+        var sara = users.AddUser("Sara");
+        var adel = users.AddUser("Adel");
+        users.AddUser("Lina"); // no work items assigned to her
 
         // Done: it has to go ToDo -> InProgress -> Done, one step at a time (R5), and needs an assignee (R6).
         var homepage = workItems.Create("Design homepage", Priority.High, sara.Id);

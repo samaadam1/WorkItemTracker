@@ -3,7 +3,7 @@ namespace WorkItemTracker.Models;
 // Declared in workflow order: ToDo -> InProgress -> Done.
 public enum WorkItemStatus
 {
-    ToDo,
-    InProgress,
+    ToDo = 1,
+    InProgress = 2,
     Done
 }

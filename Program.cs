@@ -1,3 +1,5 @@
+// seperation of concerns: each class has a single responsibility, and the classes are organized into folders by responsibility. The UI layer (Program.cs) does not know how the services work, and the services do not know how the UI works. The models are just data, with no knowledge of the UI or services.
+// decoupling: the UI layer calls the services, and the services call the models, but the models do not call the services or the UI. The models are independent of the services and UI, so they can be tested in isolation.
 using WorkItemTracker.Data;
 using WorkItemTracker.Models;
 using WorkItemTracker.Services;
@@ -9,7 +11,7 @@ namespace WorkItemTracker;
 // The menu loop. Each option reads its input with the ConsoleInput helpers, calls a service,
 // and prints the result. The rules live in the services and models, and the list formatting in Display (C1).
 public class Program
-{
+{   // static: one copy shared by everyone, not each object has its own
     private static readonly UserService Users = UserService.Instance;
     private static readonly WorkItemService WorkItems = WorkItemService.Instance;
 
@@ -58,7 +60,7 @@ public class Program
                 break;
 
             case "4":
-                Display.WorkItems(WorkItems.ListAll());
+                Display.WorkItems(WorkItems.ListAll(), Users);
                 break;
 
             case "5":
@@ -90,7 +92,7 @@ public class Program
     private static void AddUser()
     {
         var name = ConsoleInput.ReadText("Name");
-        var user = Users.Add(name);
+        var user = Users.AddUser(name);
         Console.WriteLine($"User {user.Id} '{user.Name}' added.");
     }
 
@@ -107,13 +109,13 @@ public class Program
     private static void ListWorkItemsByStatus()
     {
         var status = ConsoleInput.ReadChoice<WorkItemStatus>("Status");
-        Display.WorkItems(WorkItems.ListByStatus(status));
+        Display.WorkItems(WorkItems.ListByStatus(status), Users);
     }
 
     private static void ListWorkItemsByAssignee()
     {
         var assigneeId = ConsoleInput.ReadInt("Assignee user Id");
-        Display.WorkItems(WorkItems.ListByAssignee(assigneeId));
+        Display.WorkItems(WorkItems.ListByAssignee(assigneeId), Users);
     }
 
     private static void AssignWorkItem()
@@ -122,7 +124,7 @@ public class Program
         var userId = ConsoleInput.ReadInt("User Id");
 
         var item = WorkItems.Assign(workItemId, userId);
-        Console.WriteLine($"Work item {item.Id} assigned to {Display.AssigneeName(item)}.");
+        Console.WriteLine($"Work item {item.Id} assigned to {Display.AssigneeName(item, Users)}.");
     }
 
     private static void ChangeStatus()

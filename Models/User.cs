@@ -8,7 +8,8 @@ public class User
     // Name uniqueness (R2) is checked by the service, because one User doesn't know the others.
     public User(int id, string name)
     {
-        name = (name ?? "").Trim();
+        name = (name ?? "").Trim(); 
+        // ?? means "if null, use the right side instead", so null becomes "" and Trim() won't throw.
 
         if (name.Length == 0)
         {

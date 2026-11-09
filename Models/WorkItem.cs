@@ -57,7 +57,8 @@ public class WorkItem
     // R5: status only moves forward, one step at a time.
     // R6: moving to InProgress requires an assignee.
     public void MoveToStatus(WorkItemStatus newStatus)
-    {
+    {   // switch case is better for complex rules.
+
         if (newStatus != Status + 1)
         {
             throw new DomainException($"Cannot change status from {Status} to {newStatus}.");
