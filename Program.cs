@@ -60,8 +60,9 @@ public class Program
                 break;
 
             case "4":
-                Display.WorkItems(WorkItems.ListAll(), Users);
+                ListAllWorkItems();
                 break;
+
 
             case "5":
                 ListWorkItemsByStatus();
@@ -89,6 +90,7 @@ public class Program
         }
     }
 
+
     private static void AddUser()
     {
         var name = ConsoleInput.ReadText("Name");
@@ -106,16 +108,62 @@ public class Program
         Console.WriteLine($"Work item {item.Id} created.");
     }
 
+    // Takes a list of work items to order them.
+    // IEnumerable is a more general type of IReadOnlyList, 
+    // so it can be used with any collection that can be enumerated (looped over), not just lists. This makes the method more flexible and reusable.
+    private static void ListWorkItems(IEnumerable<WorkItem> items)
+    {
+        Console.WriteLine();
+        Console.WriteLine("Choose an order for the work items:");
+        Console.WriteLine("1. Priority (default)");
+        Console.WriteLine("2. Newest first");
+        Console.WriteLine("3. Title A-Z");
+        var order = ConsoleInput.ReadText("Order (Enter for Priority)");
+
+        switch (order)
+        {
+            case "":  // Enter = the default, Priority
+            case "1":
+                Display.WorkItems(WorkItems.OrderByPriority(items), Users);
+                break;
+            case "2":
+                Display.WorkItems(WorkItems.OrderByNewestFirst(items), Users);
+                break;
+            case "3":
+                Display.WorkItems(WorkItems.OrderByTitle(items), Users);
+                break;
+            default:
+                Console.WriteLine($"'{order}' is not a valid order option.");
+                break;
+        }
+    }
+
+    private static void ListAllWorkItems()
+    {
+        //  WorkItems is not a list. It's the WorkItemService, 
+        // the object that holds and manages the work items
+        // we need to return a list of work items from the service, then pass that list to ListWorkItems
+        ListWorkItems(WorkItems.GetAll());
+    }
+
     private static void ListWorkItemsByStatus()
     {
         var status = ConsoleInput.ReadChoice<WorkItemStatus>("Status");
-        Display.WorkItems(WorkItems.ListByStatus(status), Users);
+        // returns a list of work items filtered by the given status
+        var items_by_status = WorkItems.ListByStatus(status);
+        // Then chooses ordering method
+        ListWorkItems(items_by_status);
+
     }
 
     private static void ListWorkItemsByAssignee()
     {
         var assigneeId = ConsoleInput.ReadInt("Assignee user Id");
-        Display.WorkItems(WorkItems.ListByAssignee(assigneeId), Users);
+        // returns a list of work items assigned to the given user
+        var items_by_assignee = WorkItems.ListByAssignee(assigneeId);
+        // Then chooses ordering method
+        ListWorkItems(items_by_assignee);
+
     }
 
     private static void AssignWorkItem()

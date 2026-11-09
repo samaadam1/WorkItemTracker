@@ -14,7 +14,7 @@ public class WorkItemService
     private readonly UserService _users = UserService.Instance;
     private int _nextId = 1;
 
-    
+
     private WorkItemService()
     {
         // Private, so nobody can create a second work items list with "new WorkItemService()".
@@ -39,18 +39,30 @@ public class WorkItemService
         return item;
     }
 
-    // Q1, Q2: all items, by status, or by assignee. Always ordered by priority, then Id.
-    public IReadOnlyList<WorkItem> ListAll() => OrderByPriorityThenId(_items.Values);
+    // Q1, Q2: all items, by status, or by assignee. The Program then picks the ordering.
+    public IReadOnlyList<WorkItem> GetAll() => _items.Values.ToList();
+
+    // Priority (default): priority, then Id
+    public IReadOnlyList<WorkItem> OrderByPriority(IEnumerable<WorkItem> items) =>
+        OrderByPriorityThenId(items);
+
+    // Newest first by created-on date; items created at the same time go highest Id first.
+    public IReadOnlyList<WorkItem> OrderByNewestFirst(IEnumerable<WorkItem> items) =>
+        items.OrderByDescending(i => i.CreatedAt).ThenByDescending(i => i.Id).ToList();
+
+    // Title: A to Z ignoring case, then Id
+    public IReadOnlyList<WorkItem> OrderByTitle(IEnumerable<WorkItem> items) =>
+        items.OrderBy(i => i.Title).ThenBy(i => i.Id).ToList();
 
     public IReadOnlyList<WorkItem> ListByStatus(WorkItemStatus status) =>
-        OrderByPriorityThenId(_items.Values.Where(i => i.Status == status));
+        _items.Values.Where(i => i.Status == status).ToList();
 
     public IReadOnlyList<WorkItem> ListByAssignee(int userId)
     {
         // An Id that doesn't exist is rejected, rather than returning an empty list.
         _users.GetRequired(userId);
 
-        return OrderByPriorityThenId(_items.Values.Where(i => i.AssigneeId == userId));
+        return _items.Values.Where(i => i.AssigneeId == userId).ToList();
     }
 
     // R4: assign to an existing user. WorkItem.AssignTo rejects a Done item.
