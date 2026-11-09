@@ -21,7 +21,7 @@ This project is a learning exercise in OOP, data structures, SOLID principles an
 - Create work items with a title, a priority and an optional assignee.
 - Assign a work item to a user.
 - Move a work item forward through its statuses.
-- List work items: all, by status, or by assignee. Lists are always sorted by priority, then by Id.
+- List work items: all, by status, or by assignee. After choosing what to list, you pick the order: priority (default), newest first, or title A-Z.
 - Show a summary with the number of work items in each status.
 - Sample data loads at startup, so the app can be tried straight away.
 
@@ -29,7 +29,7 @@ This project is a learning exercise in OOP, data structures, SOLID principles an
 
 **Requirements:** the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
-```
+```bash
 git clone https://github.com/samaadam1/WorkItemTracker.git
 cd WorkItemTracker
 dotnet run
@@ -51,7 +51,7 @@ On startup the app creates:
 
 The app shows this menu, runs the chosen option, then shows it again until you pick `0`.
 
-```
+```text
 === Work Item Tracker ===
 1. Add user
 2. List users
@@ -69,8 +69,9 @@ The app shows this menu, runs the chosen option, then shows it again until you p
 |---|---|
 | 1. Add user | a name |
 | 3. Create work item | a title, a priority (by number), an optional assignee Id (Enter for none) |
-| 5. List by status | a status (by number) |
-| 6. List by assignee | a user Id |
+| 4. List all work items | an order: 1 priority (Enter for the default), 2 newest first, 3 title A-Z |
+| 5. List by status | a status (by number), then an order |
+| 6. List by assignee | a user Id, then an order |
 | 7. Assign work item | a work item Id and a user Id |
 | 8. Change status | a work item Id and the new status (by number) |
 
@@ -84,7 +85,7 @@ When a rule rejects an operation, nothing changes, the app prints `Error: <reaso
 
 - The name is required, trimmed, and at most 50 characters.
 - Names are unique, ignoring case. `Sara` and `sara` count as the same name.
-- Names can only contain letters and spaces. This rule goes beyond the requirements.
+- Names can only contain letters and spaces.
 - Ids are assigned automatically: 1, 2, 3, ...
 
 ### Work items
@@ -99,13 +100,16 @@ When a rule rejects an operation, nothing changes, the app prints `Error: <reaso
 
 ### Lists and summary
 
-- Every list is ordered by priority (High, then Medium, then Low), then by Id, lowest first.
+- You choose the order after choosing what to list (options 4, 5 and 6). Pressing Enter gives the default.
+- **Priority** (default): High, then Medium, then Low, then by Id, lowest first.
+- **Newest first**: by created date, newest first; items created at the same time go highest Id first.
+- **Title A-Z**: alphabetical by title.
 - Listing by assignee rejects a user Id that doesn't exist.
 - The summary shows all three statuses, including ones with 0 items.
 
 ## Example session
 
-```
+```text
 Name: sara
 Error: A user named 'sara' already exists.
 
@@ -129,7 +133,7 @@ ToDo: 3   InProgress: 1   Done: 1
 
 ## Project structure
 
-```
+```text
 Program.cs              Menu loop. Reads input, calls the services, prints results.
 ConsoleInput.cs         Helpers for reading numbers, text and enum choices.
 Models/
@@ -141,8 +145,6 @@ Models/
 Services/
   UserService.cs        Adds users, rejects duplicate names, finds users.
   WorkItemService.cs    Creates, assigns and changes work items, and runs the lists and summary.
-Patterns/
-  Singleton.cs          Reusable Singleton<T> base class.
 Data/
   SampleData.cs         The sample data loaded at startup.
 UI/
@@ -165,17 +167,41 @@ A single `User` doesn't know about the other users, so name uniqueness is checke
 
 ### Errors
 
-A rejected operation throws a `DomainException` with a message written for the user. The menu loop catches it in one place, prints `Error: <message>` and shows the menu again. The Id counters only move forward after an operation succeeds, so a rejected operation uses up no Id.
+A rejected operation throws a custom `DomainException` containing a user-friendly message. The menu loop in `Program.cs` catches this exception in one central place, displays `Error: <message>`, and prompts the user again. ID counters only increment after an operation succeeds, ensuring that rejected operations do not consume IDs.
+
+#### Why a Custom Exception?
+
+Catch blocks filter errors by exception type. If business logic threw a generic `Exception`, the menu loop would need to catch all `Exception` types—inadvertently masking critical bugs as ordinary user errors. Using a dedicated `DomainException` allows the application to handle domain rule violations specifically:
+
+```csharp
+// In service or model:
+throw new DomainException("A user named 'Sara' already exists.");
+
+// In main menu loop:
+catch (DomainException ex)
+{
+    Console.WriteLine($"Error: {ex.Message}");
+}
+```
+
+- **Expected Rule Rejections (Bad input or business rules):** Caught gracefully by `DomainException`, showing a friendly `Error: <reason>` message and returning the user to the menu.
+- **Unexpected System Errors (Bugs like `NullReferenceException`):** Allowed to bypass the catch block, intentionally crashing the application to output a stack trace. This prevents silent failures and makes root causes easy to locate and fix.
+
+**Key Design Benefits:**
+
+- **Safe Error Messages:** Every `DomainException` message is explicitly written for end-user display, allowing the console layer to print `ex.Message` directly.
+- **Centralized Handling:** Models and services only throw exceptions; they never interact with the console. `Program.cs` is the sole place that catches and displays domain errors, preserving clean separation of concerns.
+- **State Consistency:** Throwing an exception instantly halts execution before state changes are applied, ensuring operations fail atomically without leaving half-modified data.
 
 ### Singleton pattern
 
-`UserService` and `WorkItemService` inherit from `Singleton<T>` (`Patterns/Singleton.cs`), so there is exactly one users list and one work items list. Both are reached through `.Instance`, and their constructors are private.
+`UserService` and `WorkItemService` each have a private constructor and a `public static Instance` property, so there is exactly one users list and one work items list. Both are reached through `.Instance`.
 
 ### Data structures
 
 - Users and work items are stored in a `Dictionary<int, T>` keyed by Id, for direct lookup.
 - A `HashSet<string>` with a case-insensitive comparer checks for duplicate user names.
-- Lists are sorted with LINQ: `OrderBy(Priority).ThenBy(Id)`. `Priority` is declared High, Medium, Low, so its natural order is the order the requirements ask for.
+- Lists are sorted with LINQ in `WorkItemService.OrderByPriority`, `OrderByNewestFirst` and `OrderByTitle`, which work on any list, so they can be applied after filtering. `Priority` is declared High, Medium, Low, so its natural order is the order the requirements ask for.
 
 ## Limitations
 
