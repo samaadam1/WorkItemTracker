@@ -42,20 +42,6 @@ public class WorkItemService
     // Q1, Q2: all items, by status, or by assignee. The Program then picks the ordering.
     public IReadOnlyList<WorkItem> GetAll() => _items.Values.ToList();
 
-    // Priority (default): priority, then Id
-    public IReadOnlyList<WorkItem> OrderByPriority(IEnumerable<WorkItem> items) =>
-        OrderByPriorityThenId(items);
-
-    // Newest first by created-on date; items created at the same time go highest Id first.
-    public IReadOnlyList<WorkItem> OrderByNewestFirst(IEnumerable<WorkItem> items) =>
-        items.OrderByDescending(i => i.CreatedAt).ThenByDescending(i => i.Id).ToList();
-
-    // Title: A to Z ignoring case, then Id
-    // dont forget the ignore case
-    // strategy pattern 
-    public IReadOnlyList<WorkItem> OrderByTitle(IEnumerable<WorkItem> items) =>
-        items.OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase).ThenBy(i => i.Id).ToList();
-
     public IReadOnlyList<WorkItem> ListByStatus(WorkItemStatus status) =>
         _items.Values.Where(i => i.Status == status).ToList();
 
@@ -107,10 +93,4 @@ public class WorkItemService
 
     private WorkItem GetRequired(int id) =>
         Find(id) ?? throw new DomainException($"Work item {id} does not exist.");
-
-    // Q1-Q3: order by priority, then Id. The caller can filter first, so this is private.
-    // IEnum.OrderBy is stable, so the ThenBy preserves the priority order when Ids are compared.
-    // IEnumerable<WorkItem> is a sequence you can read through. It has no Count or index, and you can't add to it.    
-    private static IReadOnlyList<WorkItem> OrderByPriorityThenId(IEnumerable<WorkItem> items) =>
-        items.OrderBy(i => i.Priority).ThenBy(i => i.Id).ToList();
 }
