@@ -21,7 +21,7 @@ This project is a learning exercise in OOP, data structures, SOLID principles an
 - Create work items with a title, a priority and an optional assignee.
 - Assign a work item to a user.
 - Move a work item forward through its statuses.
-- List work items: all, by status, or by assignee. After choosing what to list, you pick the order: priority (default), newest first, or title A-Z.
+- List work items: all, by status, or by assignee. After choosing what to list, you pick the order: priority (default), newest first, or title A-Z. The orderings use the **Strategy design pattern**, so a new ordering is easy to add (see [Strategy pattern](#strategy-pattern)).
 - Show a summary with the number of work items in each status.
 - Sample data loads at startup, so the app can be tried straight away.
 
@@ -144,9 +144,14 @@ Models/
   DomainException.cs    Thrown when a business rule rejects an operation.
 Services/
   UserService.cs        Adds users, rejects duplicate names, finds users.
-  WorkItemService.cs    Creates, assigns and changes work items, and runs the lists and summary.
+  WorkItemService.cs    Creates, assigns and changes work items, and runs the filters and summary.
+Ordering/
+  IWorkItemOrdering.cs  The strategy interface: a Name and an Order method.
+  PriorityOrdering.cs   Priority, then Id.
+  NewestFirstOrdering.cs  Newest first, then highest Id first.
+  TitleOrdering.cs      Title A-Z, ignoring case, then Id.
 Data/
-  SampleData.cs         The sample data loaded at startup.
+  SampleData.cs         The sample data loaded at startup. Receives the services from Program.cs.
 UI/
   Display.cs            Formats the users list, the work item table and the summary.
 ```
@@ -193,19 +198,31 @@ catch (DomainException ex)
 - **Centralized Handling:** Models and services only throw exceptions; they never interact with the console. `Program.cs` is the sole place that catches and displays domain errors, preserving clean separation of concerns.
 - **State Consistency:** Throwing an exception instantly halts execution before state changes are applied, ensuring operations fail atomically without leaving half-modified data.
 
-### Singleton pattern
+### One instance of each service
 
-`UserService` and `WorkItemService` each have a private constructor and a `public static Instance` property, so there is exactly one users list and one work items list. Both are reached through `.Instance`.
+`Program.cs` creates one `UserService` and one `WorkItemService` (which receives the `UserService` in its constructor). It passes them to `SampleData.Load`, so nothing else creates or looks up a service on its own.
+
+### Strategy pattern
+
+The Strategy design pattern puts each version of an algorithm in its own class behind a shared interface, so the caller can pick one at run time without knowing how it works. Here the algorithm is "how to order work items".
+
+Each way of ordering work items is its own class that implements `IWorkItemOrdering` (`PriorityOrdering`, `NewestFirstOrdering`, `TitleOrdering`). `Program.cs` keeps them in one `orderings` list. The order menu and the input check are built from that list, and the first entry is the default.
+
+To add a new ordering:
+
+1. Create a class in `Ordering/` that implements `IWorkItemOrdering`.
+2. Add one line for it to the `orderings` list in `Program.cs`.
+
+The menu, the numbering and the validation update by themselves, and `WorkItemService` doesn't change.
 
 ### Data structures
 
 - Users and work items are stored in a `Dictionary<int, T>` keyed by Id, for direct lookup.
 - A `HashSet<string>` with a case-insensitive comparer checks for duplicate user names.
-- Lists are sorted with LINQ in `WorkItemService.OrderByPriority`, `OrderByNewestFirst` and `OrderByTitle`, which work on any list, so they can be applied after filtering. `Priority` is declared High, Medium, Low, so its natural order is the order the requirements ask for.
+- Lists are sorted with LINQ in the classes in `Ordering/`, which work on any list, so they can be applied after filtering. `Priority` is declared High, Medium, Low, so its natural order is the order the requirements ask for.
 
 ## Limitations
 
 - **Data is not saved.** Everything is lost when the app closes. There is no file or database storage.
 - **No automated tests.** The assignment leaves them out.
-- **Global state.** Because the services are singletons, state is shared across the whole app, which makes a clean reset harder.
 - **Not supported:** deleting or editing users and work items, unassigning, due dates, comments and projects.
