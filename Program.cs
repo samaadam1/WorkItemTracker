@@ -12,13 +12,14 @@ namespace WorkItemTracker;
 // and prints the result. The rules live in the services and models, and the list formatting in Display (C1).
 public class Program
 {   // static: one copy shared by everyone, not each object has its own
-    private static readonly UserService Users = UserService.Instance;
-    private static readonly WorkItemService WorkItems = WorkItemService.Instance;
+    // name it userService and workItemService to avoid confusion with the class names UserService and WorkItemService
+    private static readonly UserService userService = new UserService();
+    private static readonly WorkItemService workItemService = new WorkItemService(userService);
 
     public static void Main()
     {
         // C5: sample data so the app can be tried immediately.
-        SampleData.Load();
+        SampleData.Load(userService, workItemService);
 
         while (true)
         {
@@ -52,7 +53,7 @@ public class Program
                 break;
 
             case "2":
-                Display.Users(Users.GetAll());
+                Display.Users(userService.GetAll());
                 break;
 
             case "3":
@@ -81,7 +82,7 @@ public class Program
                 break;
 
             case "9":
-                Display.Summary(WorkItems.GetSummary());
+                Display.Summary(workItemService.GetSummary());
                 break;
 
             default:
@@ -94,7 +95,7 @@ public class Program
     private static void AddUser()
     {
         var name = ConsoleInput.ReadText("Name");
-        var user = Users.AddUser(name);
+        var user = userService.AddUser(name);
         Console.WriteLine($"User {user.Id} '{user.Name}' added.");
     }
 
@@ -104,7 +105,7 @@ public class Program
         var priority = ConsoleInput.ReadChoice<Priority>("Priority");
         var assigneeId = ConsoleInput.ReadOptionalInt("Assignee user Id (Enter for none)");
 
-        var item = WorkItems.Create(title, priority, assigneeId);
+        var item = workItemService.Create(title, priority, assigneeId);
         Console.WriteLine($"Work item {item.Id} created.");
     }
 
@@ -120,17 +121,20 @@ public class Program
         Console.WriteLine("3. Title A-Z");
         var order = ConsoleInput.ReadText("Order (Enter for Priority)");
 
+        // Work item Id -> assignee name, so Display can show names without knowing any service.
+        var assigneeNames = items.ToDictionary(i => i.Id, i => workItemService.GetAssigneeName(i.Id));
+
         switch (order)
         {
             case "":  // Enter = the default, Priority
             case "1":
-                Display.WorkItems(WorkItems.OrderByPriority(items), Users);
+                Display.WorkItems(workItemService.OrderByPriority(items), assigneeNames);
                 break;
             case "2":
-                Display.WorkItems(WorkItems.OrderByNewestFirst(items), Users);
+                Display.WorkItems(workItemService.OrderByNewestFirst(items), assigneeNames);
                 break;
             case "3":
-                Display.WorkItems(WorkItems.OrderByTitle(items), Users);
+                Display.WorkItems(workItemService.OrderByTitle(items), assigneeNames);
                 break;
             default:
                 Console.WriteLine($"'{order}' is not a valid order option.");
@@ -140,17 +144,17 @@ public class Program
 
     private static void ListAllWorkItems()
     {
-        //  WorkItems is not a list. It's the WorkItemService, 
+        //  workItemService is not a list. It's the WorkItemService, 
         // the object that holds and manages the work items
         // we need to return a list of work items from the service, then pass that list to ListWorkItems
-        ListWorkItems(WorkItems.GetAll());
+        ListWorkItems(workItemService.GetAll());
     }
 
     private static void ListWorkItemsByStatus()
     {
         var status = ConsoleInput.ReadChoice<WorkItemStatus>("Status");
         // returns a list of work items filtered by the given status
-        var items_by_status = WorkItems.ListByStatus(status);
+        var items_by_status = workItemService.ListByStatus(status);
         // Then chooses ordering method
         ListWorkItems(items_by_status);
 
@@ -160,7 +164,7 @@ public class Program
     {
         var assigneeId = ConsoleInput.ReadInt("Assignee user Id");
         // returns a list of work items assigned to the given user
-        var items_by_assignee = WorkItems.ListByAssignee(assigneeId);
+        var items_by_assignee = workItemService.ListByAssignee(assigneeId);
         // Then chooses ordering method
         ListWorkItems(items_by_assignee);
 
@@ -171,8 +175,9 @@ public class Program
         var workItemId = ConsoleInput.ReadInt("Work item Id");
         var userId = ConsoleInput.ReadInt("User Id");
 
-        var item = WorkItems.Assign(workItemId, userId);
-        Console.WriteLine($"Work item {item.Id} assigned to {Display.AssigneeName(item, Users)}.");
+        var item = workItemService.Assign(workItemId, userId);
+        var userName = workItemService.GetAssigneeName(workItemId);
+        Console.WriteLine($"Work item {item.Id} assigned to {userName}.");
     }
 
     private static void ChangeStatus()
@@ -180,7 +185,7 @@ public class Program
         var workItemId = ConsoleInput.ReadInt("Work item Id");
         var newStatus = ConsoleInput.ReadChoice<WorkItemStatus>("New status");
 
-        var item = WorkItems.ChangeStatus(workItemId, newStatus);
+        var item = workItemService.ChangeStatus(workItemId, newStatus);
         Console.WriteLine($"Work item {item.Id} is now {item.Status}.");
     }
 

@@ -1,5 +1,4 @@
 using WorkItemTracker.Models;
-using WorkItemTracker.Services;
 
 namespace WorkItemTracker.UI;
 
@@ -14,8 +13,8 @@ public static class Display
         }
     }
 
-    // C3: Id, Title, Priority, Status, Assignee name (or "-"), CreatedAt.
-    public static void WorkItems(IReadOnlyList<WorkItem> items, UserService users)
+    // C3: Id, Title, Priority, Status, Assignee name (or "Unassigned"), CreatedAt.
+    public static void WorkItems(IReadOnlyList<WorkItem> items, IReadOnlyDictionary<int, string> assigneeNames)
     {
         Console.WriteLine();
 
@@ -32,7 +31,7 @@ public static class Display
             i.Title,
             i.Priority.ToString(),
             i.Status.ToString(),
-            AssigneeName(i, users),
+            assigneeNames[i.Id],
             i.CreatedAt.ToString("yyyy-MM-dd HH:mm")
         }).ToList();
 
@@ -54,10 +53,7 @@ public static class Display
         Console.WriteLine(string.Join("   ", counts.Select(pair => $"{pair.Key}: {pair.Value}")));
     }
 
-    public static string AssigneeName(WorkItem item, UserService users) =>
-        item.AssigneeId is null
-            ? "-"
-            : users.Find(item.AssigneeId.Value)?.Name ?? "-";
+
 
     // The Id column is right-aligned like a number, the others are left-aligned.
     private static string FormatRow(string[] cells, int[] widths, bool rightAlignFirst)

@@ -7,11 +7,9 @@ namespace WorkItemTracker.Data;
 // It goes through the services, so the sample items follow the same rules as real ones.
 public static class SampleData
 {
-    public static void Load()
+    // The services are created in Program.cs and passed in, so SampleData does not create or look them up itself.
+    public static void Load(UserService users, WorkItemService workItems)
     {
-        var users = UserService.Instance;
-        var workItems = WorkItemService.Instance;
-
         var sara = users.AddUser("Sara");
         var adel = users.AddUser("Adel");
         users.AddUser("Lina"); // no work items assigned to her

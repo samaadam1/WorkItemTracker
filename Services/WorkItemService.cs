@@ -10,24 +10,24 @@ public class WorkItemService
     // Work items by Id, so looking one up is a direct hit instead of a scan.
     private readonly Dictionary<int, WorkItem> _items = new();
 
-    // we dont need only one instance for user, we need to call other differences
-    private readonly UserService _users = UserService.Instance;
+    // // we dont need only one instance for user, we need to call other differences
+    private readonly UserService _userService;
     private int _nextId = 1;
 
 
-    private WorkItemService()
+    public WorkItemService(UserService userService)
     {
-        // Private, so nobody can create a second work items list with "new WorkItemService()".
+        _userService = userService;
     }
     // static: ensures there’s only one copy shared across the program.
-    public static WorkItemService Instance { get; } = new WorkItemService();
+    // public static WorkItemService Instance { get; } = new WorkItemService();
 
     // R3: create a ToDo item with the next Id. The assignee, if given, must be an existing user.
     public WorkItem Create(string title, Priority priority, int? assigneeId)
     {
         if (assigneeId is not null)
         {
-            _users.GetRequired(assigneeId.Value);
+            _userService.GetRequired(assigneeId.Value);
         }
 
         // The constructor validates and trims the title.
@@ -51,8 +51,10 @@ public class WorkItemService
         items.OrderByDescending(i => i.CreatedAt).ThenByDescending(i => i.Id).ToList();
 
     // Title: A to Z ignoring case, then Id
+    // dont forget the ignore case
+    // strategy pattern 
     public IReadOnlyList<WorkItem> OrderByTitle(IEnumerable<WorkItem> items) =>
-        items.OrderBy(i => i.Title).ThenBy(i => i.Id).ToList();
+        items.OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase).ThenBy(i => i.Id).ToList();
 
     public IReadOnlyList<WorkItem> ListByStatus(WorkItemStatus status) =>
         _items.Values.Where(i => i.Status == status).ToList();
@@ -60,7 +62,7 @@ public class WorkItemService
     public IReadOnlyList<WorkItem> ListByAssignee(int userId)
     {
         // An Id that doesn't exist is rejected, rather than returning an empty list.
-        _users.GetRequired(userId);
+        _userService.GetRequired(userId);
 
         return _items.Values.Where(i => i.AssigneeId == userId).ToList();
     }
@@ -69,11 +71,23 @@ public class WorkItemService
     public WorkItem Assign(int workItemId, int userId)
     {
         var item = GetRequired(workItemId);
-        _users.GetRequired(userId);
+        _userService.GetRequired(userId);
 
         item.AssignTo(userId);
         return item;
     }
+
+    // The assignee's name for a work item, or "Unassigned" if it has none.
+    // Lives here (not on WorkItem) because only the services know the users.
+    public string GetAssigneeName(int workItemId)
+    {
+        var item = GetRequired(workItemId);
+
+        return item.AssigneeId is int userId
+            ? _userService.GetName(userId)
+            : "-";
+    }
+
 
     // R5, R6: WorkItem.MoveToStatus enforces the transition rules.
     public WorkItem ChangeStatus(int workItemId, WorkItemStatus newStatus)
